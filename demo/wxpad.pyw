@@ -473,8 +473,4 @@ if __name__=='__main__':
     app=wx.App()
     frame=MyFrame()
     frame.Show()
-
-    dlg=wx.MessageDialog(None,u'是否将更改保存到 '' ?',u'记事本',wx.YES_NO|wx.CANCEL)
-    val=dlg.Show()
-
     app.MainLoop()
