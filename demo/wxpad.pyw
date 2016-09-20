@@ -25,7 +25,6 @@ class MyFrame(wx.Frame):
 
         self.dlg_find=self.dlg_replace=None
         self.find_str=self.replace_str=''
-        self.find_pos=0
 
         self.Centre()
 
@@ -234,7 +233,7 @@ class MyFrame(wx.Frame):
             self.dlg_find.SetFocus()
         else:
             self.data=wx.FindReplaceData()
-            self.dlg_find=wx.FindReplaceDialog(self.text_edit,self.data,u' 查找')
+            self.dlg_find=wx.FindReplaceDialog(self,self.data,u' 查找')
             self.data.SetFindString(self.find_str)
             self.dlg_find.Show()
 
@@ -253,7 +252,7 @@ class MyFrame(wx.Frame):
             self.dlg_replace.SetFocus()
         else:
             self.data=wx.FindReplaceData()
-            self.dlg_replace=wx.FindReplaceDialog(self.text_edit,self.data,u' 查找与替换',wx.ID_REPLACE)
+            self.dlg_replace=wx.FindReplaceDialog(self,self.data,u' 查找与替换',wx.ID_REPLACE)
             self.data.SetFindString(self.find_str)
             self.data.SetReplaceString(self.replace_str)
             self.dlg_replace.Show()
@@ -263,42 +262,48 @@ class MyFrame(wx.Frame):
         event.EventObject.Destroy()
 
     def onWindowFindNext(self,event):
-        '''
-            获取查找字符串
-            获取查找字符串长度
-            如果编辑器有选中文本
-                查找点值为选中文本的尾部
-            否则
-                查找点值为插入点
-        '''
+        
+        # 首先获取查找字符串及其长度
+        # 如果有选中字符串，那么
+        # 获取选中字符串开始和结束位置
+        # 开始点为 选中字符串行列坐标转化为索引 加上字符串长度
+        # 查找子字符串
+
+        # 否则
+        # 开始点为 编辑区插入点
+        # 查找子字符串
+
+        # 如果未找到
+        # 弹出提示信息模态框
+        # 注销模态框
+        # 函数返回
+        
+        # 如果找到子字符串
+        # 那么在编辑区选中它
 
         self.find_str=self.data.GetFindString()
         fs_len=len(self.find_str)
         if self.text_edit.GetStringSelection():
-            x,y=self.text_edit.GetSelection()
-            start_point=self.text_edit.XYToPosition(x,y)+fs_len
+            start,end=self.text_edit.GetSelection()
+            start_point=self.text_edit.XYToPosition(start,end)+fs_len
             temp_pos=self.text_content.find(self.find_str,start_point+1)
         else:
             start_point=self.text_edit.GetInsertionPoint()
             temp_pos=self.text_content.find(self.find_str,start_point)
         if temp_pos==-1:
-            dlg=wx.MessageDialog(self,u'未找到指定字符串',u'提示',style=0)
+            dlg=wx.MessageDialog(self,u'查找已达到尾部！',u'提示',style=0)
             dlg.ShowModal()
             dlg.Destroy()
             return
         self.text_edit.SetSelection(temp_pos,temp_pos+fs_len)
         
     def onWindowReplace(self,event):
-        '''
-            先查找文本编辑区是否有选中的字符串
-                如果有选中
-                    比较是否跟查找文本框值相同
-                        如果相同
-                            直接替换
-                            选中下一个查找字符串
-                        否则
-                            编辑区查找文本框字符串
-        '''
+
+        # 取到查找和替换字符串以及选中字符串
+        # 如果有选中字符串
+        # 比较是否与查找字符串相等
+        # 如果相等，获取选中字符串开始和结束位置，然后替换
+        # 接着查找下一个
 
         self.find_str=self.data.GetFindString()
         self.replace_str=self.data.GetReplaceString()
@@ -307,14 +312,12 @@ class MyFrame(wx.Frame):
             if sel_text==self.find_str:
                 start,end=self.text_edit.GetSelection()
                 self.text_edit.Replace(start,end,self.replace_str)
-                self.onWindowFindNext(None)
-            else:
-                self.onWindowFindNext(None)
-        else:
-            self.onWindowFindNext(None)
+        self.onWindowFindNext(None)
 
     def onWindowReplaceAll(self,event):
-        print 'replace all'
+        self.find_str=self.data.GetFindString()
+        self.replace_str=self.data.GetReplaceString()
+        self.text_edit.SetValue(self.text_content.replace(self.find_str,self.replace_str))
 
     # 跳转指定行
     def onGoto(self,event):
@@ -378,6 +381,7 @@ class MyFrame(wx.Frame):
     # 文本编辑内容改变事件
     def onTextChange(self,event):
         self.is_saved=False
+        self.text_content=self.text_edit.GetValue().replace('\n', '\r\n')
         if self.current_file_basename:
             self.SetTitle(self.current_file_basename+'* - '+self.app_name)
         val=self.text_edit.GetValue()
