@@ -9,7 +9,7 @@ class MyFrame(wx.Frame):
         super(MyFrame,self).__init__(None,-1,u'记事本 - 无标题',size=(600,400))
 
         self.panel=wx.Panel(self,-1)
-        self.text_edit=wx.TextCtrl(self.panel,style=wx.TE_MULTILINE|wx.TE_DONTWRAP)
+        self.text_edit=wx.TextCtrl(self.panel,style=wx.TE_MULTILINE|wx.TE_DONTWRAP|wx.TE_NOHIDESEL)
         self.text_edit.SetFont(wx.Font(11,wx.DEFAULT,wx.NORMAL,wx.NORMAL,faceName=u'宋体'))
         dt=MyFileDropTarget(self.text_edit)
         self.text_edit.SetDropTarget(dt)
@@ -26,7 +26,6 @@ class MyFrame(wx.Frame):
         self.dlg_find=self.dlg_replace=None
         self.find_str=self.replace_str=''
         self.find_pos=0
-        self.text_len=0
 
         self.Centre()
 
@@ -227,6 +226,7 @@ class MyFrame(wx.Frame):
         self.text_edit.RemoveSelection()
 
     def onOpenFindDialog(self,event):
+        self.text_content=self.text_edit.GetValue().replace('\n', '\r\n')
         if self.dlg_replace:
             self.dlg_replace.SetFocus()
             return
@@ -235,15 +235,17 @@ class MyFrame(wx.Frame):
         else:
             self.data=wx.FindReplaceData()
             self.dlg_find=wx.FindReplaceDialog(self.text_edit,self.data,u' 查找')
+            self.data.SetFindString(self.find_str)
             self.dlg_find.Show()
 
     def onFindNext(self,event):
-        if self.find_text:
+        if self.find_str:
             self.onWindowFindNext(None)
         else:
             self.onOpenFindDialog(None)
 
     def onOpenReplaceDialog(self,event):
+        self.text_content=self.text_edit.GetValue().replace('\n', '\r\n')
         if self.dlg_find:
             self.dlg_find.SetFocus()
             return
@@ -252,6 +254,8 @@ class MyFrame(wx.Frame):
         else:
             self.data=wx.FindReplaceData()
             self.dlg_replace=wx.FindReplaceDialog(self.text_edit,self.data,u' 查找与替换',wx.ID_REPLACE)
+            self.data.SetFindString(self.find_str)
+            self.data.SetReplaceString(self.replace_str)
             self.dlg_replace.Show()
 
     # 窗体文本查找和替换
@@ -259,21 +263,55 @@ class MyFrame(wx.Frame):
         event.EventObject.Destroy()
 
     def onWindowFindNext(self,event):
-        find_str=self.data.GetFindString()
-        print find_str
+        '''
+            获取查找字符串
+            获取查找字符串长度
+            如果编辑器有选中文本
+                查找点值为选中文本的尾部
+            否则
+                查找点值为插入点
+        '''
 
+        self.find_str=self.data.GetFindString()
+        fs_len=len(self.find_str)
+        if self.text_edit.GetStringSelection():
+            x,y=self.text_edit.GetSelection()
+            start_point=self.text_edit.XYToPosition(x,y)+fs_len
+            temp_pos=self.text_content.find(self.find_str,start_point+1)
+        else:
+            start_point=self.text_edit.GetInsertionPoint()
+            temp_pos=self.text_content.find(self.find_str,start_point)
+        if temp_pos==-1:
+            dlg=wx.MessageDialog(self,u'未找到指定字符串',u'提示',style=0)
+            dlg.ShowModal()
+            dlg.Destroy()
+            return
+        self.text_edit.SetSelection(temp_pos,temp_pos+fs_len)
+        
     def onWindowReplace(self,event):
-        # 获取查找字符串
-        find_str=self.data.GetFindString() or self.data.FindString
-        # 获取替换字符串
-        replace_str=self.data.GetReplaceString() or self.data.ReplaceString
+        '''
+            先查找文本编辑区是否有选中的字符串
+                如果有选中
+                    比较是否跟查找文本框值相同
+                        如果相同
+                            直接替换
+                            选中下一个查找字符串
+                        否则
+                            编辑区查找文本框字符串
+        '''
 
-        # 设置查找字符串
-        set_find_str=self.data.SetFindString('sd')
-        # 设置替换字符串
-        set_replace_str=self.data.SetReplaceString('dd')
-
-        print find_str,replace_str
+        self.find_str=self.data.GetFindString()
+        self.replace_str=self.data.GetReplaceString()
+        sel_text=self.text_edit.GetStringSelection()
+        if sel_text:
+            if sel_text==self.find_str:
+                start,end=self.text_edit.GetSelection()
+                self.text_edit.Replace(start,end,self.replace_str)
+                self.onWindowFindNext(None)
+            else:
+                self.onWindowFindNext(None)
+        else:
+            self.onWindowFindNext(None)
 
     def onWindowReplaceAll(self,event):
         print 'replace all'
@@ -301,9 +339,9 @@ class MyFrame(wx.Frame):
         font=self.text_edit.GetFont()
         pos=self.text_edit.GetInsertionPoint()
         self.text_edit.Destroy()
-        w_style=wx.TE_MULTILINE | wx.TE_DONTWRAP
+        w_style=wx.TE_MULTILINE | wx.TE_DONTWRAP|wx.TE_NOHIDESEL
         if self.format_menu_auto_wrap.IsChecked():
-            w_style=wx.TE_MULTILINE|wx.TE_WORDWRAP
+            w_style=wx.TE_MULTILINE|wx.TE_WORDWRAP|wx.TE_NOHIDESEL
         self.text_edit=wx.TextCtrl(self.panel,-1,style=w_style)
         self.text_edit.SetFont(font)
         self.bsizer_h.Add(self.text_edit,proportion=1,flag=wx.EXPAND|wx.ALL)
