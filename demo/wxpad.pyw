@@ -203,7 +203,8 @@ class MyFrame(wx.Frame):
         pass
 
     def onPrint(self,event):
-        pass
+        printer=wx.html.HtmlEasyPrinting(u'打印',self)
+        printer.PrintText(self.text_edit.GetValue())
 
     def onExit(self,event):
         self.Close()
